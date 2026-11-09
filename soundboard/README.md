@@ -68,4 +68,6 @@ Debug: In der Chrome-Konsole (F12) ist `soundboard` verfügbar (z. B. `soundboar
 | `store.js` | IndexedDB, `storage.persist()` |
 | `project.js` | Projektformat (`.sbproj`), Validierung, Import/Export |
 | `util.js` | DOM-Helfer, Fehlerlog |
-| `sw.js`, `manifest.webmanifest`, `icon-*.png` | PWA/Offline |
+| `sw.js`, `manifest.webmanifest` | PWA/Offline |
+| `logo.svg` | Logo (Service-Klingel, transparenter Hintergrund) für Kopfzeilen, Dokumente, Folien |
+| `icon.svg`, `icon-small.svg`, `icon-*.png` | App-Icon mit dunkler Kachel; `icon-small.svg` ohne Schallwellen als Favicon, `icon-maskable-512.png` für runde/ausgeschnittene Android-/Desktop-Icons |

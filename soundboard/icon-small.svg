@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="t d">
+<title id="t">Soundboard Live Icon (klein)</title><desc id="d">Service-Klingel in Neongrün auf dunklem Grund</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#181e27"/><stop offset="1" stop-color="#07090c"/></linearGradient>
+  <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#18ff80" stop-opacity="0.20"/><stop offset="1" stop-color="#18ff80" stop-opacity="0"/></radialGradient>
+  <linearGradient id="dome" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6dffb2"/><stop offset="0.4" stop-color="#18ff80"/><stop offset="1" stop-color="#0a9a4d"/></linearGradient>
+  <linearGradient id="shade" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#003018" stop-opacity="0"/><stop offset="0.55" stop-color="#003018" stop-opacity="0"/><stop offset="1" stop-color="#003018" stop-opacity="0.38"/></linearGradient>
+  <linearGradient id="rim" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1fd774"/><stop offset="1" stop-color="#0a7a3f"/></linearGradient>
+  <linearGradient id="base" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a4554"/><stop offset="1" stop-color="#1c232d"/></linearGradient>
+</defs>
+<rect width="512" height="512" rx="112" fill="url(#bg)"/>
+<circle cx="256" cy="268" r="215" fill="url(#glow)"/>
+<rect x="2" y="2" width="508" height="508" rx="110" fill="none" stroke="#2a323d" stroke-width="3"/>
+<g transform="translate(0 -13)">
+  <rect x="243" y="140" width="26" height="48" rx="6" fill="url(#dome)"/>
+  <rect x="224" y="114" width="64" height="30" rx="15" fill="url(#dome)"/>
+  <rect x="84" y="378" width="344" height="46" rx="22" fill="url(#base)"/>
+  <rect x="104" y="385" width="304" height="5" rx="2.5" fill="#5a6a7e" opacity=".7"/>
+  <path d="M120 358C120 246 180 180 256 180C332 180 392 246 392 358Z" fill="url(#dome)"/>
+  <path d="M120 358C120 246 180 180 256 180C332 180 392 246 392 358Z" fill="url(#shade)"/>
+  <path d="M152 332C152 270 184 224 230 205" fill="none" stroke="#eafff3" stroke-opacity=".6" stroke-width="14" stroke-linecap="round"/>
+  <rect x="100" y="346" width="312" height="34" rx="17" fill="url(#rim)"/>
+  <rect x="116" y="351" width="280" height="4" rx="2" fill="#8dffc4" opacity=".5"/>
+</g>
+</svg>

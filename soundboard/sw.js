@@ -5,6 +5,7 @@ const CACHE = 'soundboard-shell-v5';
 const SHELL = [
   './', 'index.html', 'style.css', 'app.js', 'util.js', 'store.js', 'engine.js', 'midi.js',
   'project.js', 'ui.js', 'dialogs.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
+  'icon-maskable-512.png', 'icon.svg', 'icon-small.svg', 'logo.svg',
 ];
 
 self.addEventListener('install', (e) => {
