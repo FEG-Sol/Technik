@@ -12,10 +12,6 @@
 <body>
   <header id="bar">
     <h1>SOUNDBOARD</h1>
-    <label class="master">Master
-      <input id="master" type="range" min="0" max="100" step="1" value="100" title="Doppelklick = 100 %">
-      <input id="master-num" type="number" min="0" max="100" step="1" value="100">%
-    </label>
     <button id="panic" title="Alle Sounds sofort stoppen (20 ms Ausblendung)">PANIC</button>
     <span id="chip-audio" class="chip">Audio …</span>
     <span id="chip-midi" class="chip">MIDI …</span>
@@ -24,10 +20,10 @@
     <button id="chip-err" class="chip bad" hidden>Fehler 0</button>
     <span class="spacer"></span>
     <button id="btn-add" class="edit-only">＋ Sounds</button>
-    <button id="btn-empty" class="edit-only">＋ Leeres Pad</button>
+    <button id="btn-empty" class="edit-only" title="Leeres Pad als Platzhalter anlegen">＋ Pad</button>
     <button id="btn-new" class="edit-only">Neu</button>
-    <button id="btn-load" class="edit-only">Laden …</button>
-    <button id="btn-save">Speichern …</button>
+    <button id="btn-load" class="edit-only">Laden</button>
+    <button id="btn-save">Speichern</button>
     <button id="btn-show">🔒 Show-Modus</button>
     <button id="btn-settings">⚙ Einstellungen</button>
   </header>
@@ -40,6 +36,7 @@
     <h2>Audio ist gesperrt</h2>
     <p id="overlay-text">Chrome verlangt einen Klick, bevor Ton ausgegeben werden darf.</p>
     <button id="overlay-btn">AUDIO AKTIVIEREN</button>
+    <p class="remind">Vor der Show prüfen: Systemlautstärke aufgedreht und nicht stummgeschaltet? Die App kann das nicht erkennen – am besten kurz den Ausgangstest in den Einstellungen hören.</p>
   </div>
 
   <dialog id="dlg-routing"></dialog>

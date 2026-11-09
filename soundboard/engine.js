@@ -112,7 +112,7 @@ export class Pad extends Emitter {
       n.gain.channelInterpretation = 'discrete';
       n.gain.gain.value = this.volume / 100;
       n.merger.connect(n.gain);
-      n.gain.connect(e.master);
+      n.gain.connect(ctx.destination);
       this.nodes = n;
       this.cells.clear();
       this.applyRouting();
@@ -332,9 +332,8 @@ export class Engine extends Emitter {
   constructor() {
     super();
     this.ctx = null;
-    this.master = null;
     this.pads = [];
-    this.cfg = { sinkId: '', sinkLabel: '', latency: 'balanced', masterVolume: 100 };
+    this.cfg = { sinkId: '', sinkLabel: '', latency: 'balanced' };
     this.outputCount = 2;
     this.maxChannels = 2;
     this.activeSinkId = '';
@@ -393,13 +392,6 @@ export class Engine extends Emitter {
       }
     }
     this._configureOutputs();
-    const m = ctx.createGain();
-    m.channelCount = this.outputCount;
-    m.channelCountMode = 'explicit';
-    m.channelInterpretation = 'discrete';
-    m.gain.value = (this.cfg.masterVolume ?? 100) / 100;
-    m.connect(ctx.destination);
-    this.master = m;
     // Kanalzahl kann sich kurz nach dem Gerätewechsel noch ändern: einmal nachprüfen
     setTimeout(() => {
       if (this.ctx !== ctx) return;
@@ -526,11 +518,6 @@ export class Engine extends Emitter {
     });
   }
 
-  setMaster(pct) {
-    this.cfg.masterVolume = pct;
-    if (this.master) this.master.gain.setTargetAtTime(pct / 100, this.ctx.currentTime, 0.015);
-  }
-
   panic() {
     for (const p of this.pads) {
       try { if (p.state === 'playing' || p.state === 'paused') p.reset(PANIC_FADE); } catch (e) { logError('panic', e); }
@@ -545,7 +532,7 @@ export class Engine extends Emitter {
     return b;
   }
 
-  // Testton (440 Hz, -20 dBFS) auf genau einen Ausgang, direkt am destination (am Master vorbei)
+  // Testton (440 Hz, -20 dBFS) auf genau einen Ausgang, direkt am destination, unabhängig von den Pads
   testTone(out, when, dur = 1.0) {
     const ctx = this.ctx;
     if (!ctx || out >= this.outputCount) return;

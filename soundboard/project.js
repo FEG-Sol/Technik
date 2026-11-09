@@ -70,12 +70,12 @@ export function sanitizeProject(raw) {
     ids.add(sp.id);
     pads.push(sp);
   }
-  const mv = Number(isObj(raw.settings) ? raw.settings.masterVolume : 100);
+  // Ältere Dateien enthalten settings.masterVolume; der Wert wird ignoriert (Master gibt es nicht mehr).
   return {
     format: FORMAT,
     version: VERSION,
     savedAt: str(raw.savedAt, '', 40),
-    settings: { masterVolume: Number.isFinite(mv) ? Math.min(100, Math.max(0, Math.round(mv))) : 100 },
+    settings: {},
     pads,
   };
 }
@@ -85,7 +85,7 @@ export function serializeProject(engine) {
     format: FORMAT,
     version: VERSION,
     savedAt: new Date().toISOString(),
-    settings: { masterVolume: engine.cfg.masterVolume ?? 100 },
+    settings: {},
     pads: engine.pads.map((p) => p.toJSON()),
   };
 }
