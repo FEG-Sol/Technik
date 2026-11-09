@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Stroboskop-Kreis</title>
+  <style>
+    html,body{height:100%;margin:0;background:#000;color:#ddd;font-family:system-ui,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    canvas{display:block;width:100vw;height:100vh}
+    .overlay{
+      position:fixed;left:12px;top:12px;background:rgba(0,0,0,0.5);padding:10px;border-radius:8px;font-size:13px;line-height:1.4;color:#fff;
+      backdrop-filter:blur(4px);
+      max-width:36ch
+    }
+    .legend{opacity:0.9}
+    .status{margin-top:8px;font-weight:600}
+    .hint{margin-top:8px;font-size:12px;opacity:0.85}
+    .key{display:inline-block;padding:2px 6px;border-radius:4px;background:rgba(255,255,255,0.06);margin:2px}
+    footer{position:fixed;right:12px;bottom:12px;font-size:12px;color:#999}
+  </style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div class="overlay legend">
+  <div><strong>Interaktionen</strong></div>
+  <div class="hint">
+    <span class="key">+ / -</span> Radius ±1px<br>
+    <span class="key">← → ↑ ↓</span> Position ±1px<br>
+    <span class="key">0 - 9</span> Strobe (0 = dauerhaft, 1 langsam ... 9 schnell)<br>
+    <span class="key">q w e r t z u i o p</span> Farben (q = weiß, rest = vorgegeben)<br>
+    <span class="key">Leertaste</span> Halbkreis toggle (dreht sich mit 2s/Umdrehung)<br>
+    <span class="key">y x c v</span> Rainbow-Modus (verschiedene Geschwindigkeiten)<br>
+    <span class="key">h</span> Text ausblenden/einblenden<br>
+    <span class="key">b</span> Großes Karomuster (schwarz-weiß)<br>
+    <span class="key">n</span> Kleines Karomuster (schwarz-weiß)<br>
+    <span class="key">m</span> Regenbogen-Karomuster
+  </div>
+  <div class="status" id="status">Lade...</div>
+</div>
+<footer>Erstellt automatisch – Bedienung per Tastatur</footer>
+
+<script>
+(() => {
+  const canvas = document.getElementById('cv');
+  const ctx = canvas.getContext('2d');
+  function resize(){
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.floor(window.innerWidth * dpr);
+    canvas.height = Math.floor(window.innerHeight * dpr);
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  // State
+  let cx = Math.round(window.innerWidth/2);
+  let cy = Math.round(window.innerHeight/2);
+  let radius = 80; // px
+  let color = {r:255,g:255,b:255}; // white default
+  let strobeN = 0; // 0..9  (0 = always)
+  let rainbow = {on:false, period:4000, t0:performance.now()};
+  let semicircle = false;
+  let semicircleAngle = 0;
+  const rotationSpeedRadPerS = (2*Math.PI) / 2; // 2 seconds per rotation -> 2π/2 = π rad/s
+  let hideText = false;
+  let checkerPattern = 'none'; // 'none', 'large', 'small', 'rainbow'
+  let patternRotation = 0; // rotation angle for checker patterns
+  const patternRotationSpeed = -Math.PI / 4; // -45 degrees per second (counter-clockwise)
+
+  // Color presets map for q w e r t z u i o p
+  const keyColors = {
+    'q': {r:255,g:255,b:255}, // white
+    'w': {r:255,g:0,b:0},     // red
+    'e': {r:0,g:255,b:0},     // green
+    'r': {r:0,g:120,b:255},   // blue
+    't': {r:255,g:220,b:0},   // yellow
+    'z': {r:255,g:0,b:255},   // magenta
+    'u': {r:0,g:255,b:255},   // cyan / türkis
+    'i': {r:255,g:120,b:0},   // orange
+    'o': {r:180,g:80,b:255},  // purple
+    'p': {r:255,g:130,b:170}  // pink
+  };
+
+  // Rainbow speeds for y,x,c,v in ms per full cycle
+  const rainbowPresets = {
+    'y': 12000,
+    'x': 6000,
+    'c': 3000,
+    'v': 1000
+  };
+
+  // Helpers
+  function clampPos(){
+    cx = Math.max(0, Math.min(window.innerWidth, cx));
+    cy = Math.max(0, Math.min(window.innerHeight, cy));
+  }
+  function setColorFromKey(k){
+    if(keyColors[k]){
+      color = {...keyColors[k]};
+      rainbow.on = false;
+    }
+  }
+
+  function hsvToRgb(h,s,v){ // h in [0,360], s,v in [0,1]
+    let c = v*s;
+    let x = c*(1-Math.abs((h/60)%2-1));
+    let m = v-c;
+    let r=0,g=0,b=0;
+    if(h<60){r=c;g=x;b=0}
+    else if(h<120){r=x;g=c;b=0}
+    else if(h<180){r=0;g=c;b=x}
+    else if(h<240){r=0;g=x;b=c}
+    else if(h<300){r=x;g=0;b=c}
+    else {r=c;g=0;b=x}
+    return {r:Math.round((r+m)*255), g:Math.round((g+m)*255), b:Math.round((b+m)*255)};
+  }
+
+  // Input handling
+  window.addEventListener('keydown', (ev) => {
+    const k = ev.key.toLowerCase();
+    // Radius
+    if(k === '+' || k === '=' ){
+      radius = Math.max(1, radius+1);
+      ev.preventDefault();
+    } else if(k === '-'){
+      radius = Math.max(1, radius-1);
+      ev.preventDefault();
+    }
+    // Arrow keys
+    else if(ev.key === 'ArrowLeft') { cx -= 1; ev.preventDefault(); }
+    else if(ev.key === 'ArrowRight') { cx += 1; ev.preventDefault(); }
+    else if(ev.key === 'ArrowUp') { cy -= 1; ev.preventDefault(); }
+    else if(ev.key === 'ArrowDown') { cy += 1; ev.preventDefault(); }
+
+    // Numbers 0-9 strobe
+    else if(/[0-9]/.test(k)){
+      strobeN = parseInt(k,10);
+    }
+
+    // color keys qwertzuiop
+    else if('qwertzuiop'.includes(k)){
+      setColorFromKey(k);
+    }
+
+    // semicircle toggle space
+    else if(k === ' ' || ev.code === 'Space'){
+      semicircle = !semicircle;
+      ev.preventDefault();
+    }
+
+    // rainbow presets y x c v
+    else if('yxcv'.includes(k)){
+      if(rainbow.on && rainbow.period === rainbowPresets[k]){
+        // toggle off if same
+        rainbow.on = false;
+      } else {
+        rainbow.on = true;
+        rainbow.period = rainbowPresets[k];
+        rainbow.t0 = performance.now();
+      }
+    }
+
+    // h = hide/show text
+    else if(k === 'h'){
+      hideText = !hideText;
+      document.querySelector('.overlay').style.display = hideText ? 'none' : 'block';
+      document.querySelector('footer').style.display = hideText ? 'none' : 'block';
+    }
+
+    // b = large checker pattern
+    else if(k === 'b'){
+      checkerPattern = checkerPattern === 'large' ? 'none' : 'large';
+    }
+
+    // n = small checker pattern
+    else if(k === 'n'){
+      checkerPattern = checkerPattern === 'small' ? 'none' : 'small';
+    }
+
+    // m = rainbow checker pattern
+    else if(k === 'm'){
+      checkerPattern = checkerPattern === 'rainbow' ? 'none' : 'rainbow';
+    }
+
+    clampPos();
+    updateStatus();
+  });
+
+  // Update status overlay
+  const statusEl = document.getElementById('status');
+  function updateStatus(){
+    const colText = rainbow.on ? `rainbow (${rainbow.period}ms)` : `rgb(${color.r},${color.g},${color.b})`;
+    const patternText = checkerPattern === 'none' ? 'keine' : 
+                        checkerPattern === 'large' ? 'groß (b/w)' :
+                        checkerPattern === 'small' ? 'klein (b/w)' : 'Regenbogen';
+    statusEl.innerHTML = `Pos: ${cx}px × ${cy}px<br>Radius: ${radius}px<br>Farbe: ${colText}<br>Strobe: ${strobeN} ${strobeN===0? '(dauerhaft)':'' }<br>Halbkreis: ${semicircle? 'AN':'AUS'}<br>Karomuster: ${patternText}`;
+  }
+  updateStatus();
+
+  // Strobe interval computation: map n=1..9 to period in ms (full on+off cycle)
+  function strobePeriodFromN(n){
+    if(n<=0) return 0;
+    // linear mapping: n=1 -> 1000ms, n=9 -> 120ms
+    return Math.round(1000 - (n-1)*(880/8));
+  }
+
+  // Fill circle with checker pattern
+  function fillWithPattern(ctx, centerX, centerY, rad, baseColor, startAngle, endAngle, isSemicircle){
+    const squareSize = checkerPattern === 'small' ? 8 : (checkerPattern === 'large' ? 24 : 16);
+    
+    // Save current state and clip to circle/semicircle
+    ctx.save();
+    ctx.clip();
+    
+    // Apply rotation transform
+    ctx.translate(centerX, centerY);
+    ctx.rotate(patternRotation);
+    ctx.translate(-centerX, -centerY);
+    
+    // Draw checker pattern within bounding box
+    const startX = Math.floor(centerX - rad * 1.5);
+    const startY = Math.floor(centerY - rad * 1.5);
+    const endX = Math.ceil(centerX + rad * 1.5);
+    const endY = Math.ceil(centerY + rad * 1.5);
+    
+    for(let y = startY; y < endY; y += squareSize){
+      for(let x = startX; x < endX; x += squareSize){
+        // Check if square center is inside circle (before rotation)
+        const squareCenterX = x + squareSize/2;
+        const squareCenterY = y + squareSize/2;
+        const dist = Math.hypot(squareCenterX - centerX, squareCenterY - centerY);
+        
+        if(dist <= rad){
+          // Determine checker color
+          const gridX = Math.floor(x / squareSize);
+          const gridY = Math.floor(y / squareSize);
+          const isWhiteSquare = (gridX + gridY) % 2 === 0;
+          
+          if(checkerPattern === 'rainbow'){
+            // Rainbow pattern: use hue based on position
+            const angle = Math.atan2(squareCenterY - centerY, squareCenterX - centerX);
+            const hue = ((angle + Math.PI) / (2 * Math.PI)) * 360;
+            const rainbowColor = hsvToRgb(hue, 1, 1);
+            ctx.fillStyle = isWhiteSquare ? `rgb(${rainbowColor.r},${rainbowColor.g},${rainbowColor.b})` : '#000000';
+          } else {
+            // Black and white checker
+            ctx.fillStyle = isWhiteSquare ? '#ffffff' : '#000000';
+          }
+          
+          ctx.fillRect(x, y, squareSize, squareSize);
+        }
+      }
+    }
+    
+    ctx.restore();
+  }
+
+  // Draw loop
+  let last = performance.now();
+  function draw(now){
+    const dt = (now-last)/1000; last = now;
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    // Update pattern rotation if checker pattern is active
+    if(checkerPattern !== 'none'){
+      patternRotation += patternRotationSpeed * dt;
+      // Normalize angle
+      if(patternRotation < -Math.PI*2) patternRotation += Math.PI*2;
+    }
+
+    // background is black by CSS; make sure canvas cleared to transparent over black
+    // Determine current color
+    let drawColor = {...color};
+    if(rainbow.on){
+      const t = (now - rainbow.t0) % rainbow.period;
+      const hue = (t / rainbow.period) * 360; // 0..360
+      drawColor = hsvToRgb(hue,1,1);
+    }
+
+    // strobe visibility
+    let visible = true;
+    const period = strobePeriodFromN(strobeN);
+    if(period>0){
+      const half = period/2;
+      const phase = (now % period);
+      visible = phase < half;
+    }
+
+    if(visible){
+      ctx.beginPath();
+      if(semicircle){
+        // draw a semicircle (half filled) that rotates around center
+        semicircleAngle += rotationSpeedRadPerS * dt;
+        // normalize
+        if(semicircleAngle > Math.PI*2) semicircleAngle -= Math.PI*2;
+        const a1 = semicircleAngle;
+        const a2 = a1 + Math.PI;
+        // draw filled arc
+        ctx.moveTo(cx,cy);
+        ctx.arc(cx,cy,radius,a1,a2);
+        ctx.closePath();
+        
+        if(checkerPattern !== 'none'){
+          fillWithPattern(ctx, cx, cy, radius, drawColor, a1, a2, true);
+        } else {
+          ctx.fillStyle = `rgb(${drawColor.r},${drawColor.g},${drawColor.b})`;
+          ctx.fill();
+        }
+        // the other half should be black; since background is black we don't need to draw it
+      } else {
+        ctx.arc(cx,cy,radius,0,Math.PI*2);
+        
+        if(checkerPattern !== 'none'){
+          fillWithPattern(ctx, cx, cy, radius, drawColor);
+        } else {
+          ctx.fillStyle = `rgb(${drawColor.r},${drawColor.g},${drawColor.b})`;
+          ctx.fill();
+        }
+      }
+    }
+
+    updateStatus();
+    requestAnimationFrame(draw);
+  }
+  requestAnimationFrame(draw);
+
+  // Small extra: allow mouse drag to move circle
+  let dragging = false;
+  canvas.addEventListener('mousedown', (e) =>{
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const dx = mx - cx, dy = my - cy;
+    if(Math.hypot(dx,dy) <= radius+6){
+      dragging = true;
+    }
+  });
+  window.addEventListener('mousemove', (e) => {
+    if(!dragging) return;
+    const rect = canvas.getBoundingClientRect();
+    cx = Math.round(e.clientX - rect.left);
+    cy = Math.round(e.clientY - rect.top);
+    clampPos();
+    updateStatus();
+  });
+  window.addEventListener('mouseup', ()=> dragging = false);
+
+  // prevent spacebar from scrolling
+  window.addEventListener('keydown', (e)=>{ if(e.code === 'Space') e.preventDefault(); });
+
+  // ensure overlay text is updated initially
+  updateStatus();
+
+  // touch: tap to move
+  canvas.addEventListener('touchstart', (ev)=>{
+    const t = ev.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    cx = Math.round(t.clientX - rect.left);
+    cy = Math.round(t.clientY - rect.top);
+    clampPos();
+    updateStatus();
+  });
+
+})();
+</script>
+</body>
+</html>
