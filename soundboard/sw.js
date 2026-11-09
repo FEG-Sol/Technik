@@ -1,7 +1,7 @@
 // Service Worker: App-Shell offline verfügbar (cache-first, im Hintergrund aktualisiert).
 // Bei Code-Änderungen CACHE hochzählen. Neue Versionen werden erst beim nächsten Start aktiv
 // (kein skipWaiting), damit sich die App nie mitten in einer Show austauscht.
-const CACHE = 'soundboard-shell-v5';
+const CACHE = 'soundboard-shell-v4';
 const SHELL = [
   './', 'index.html', 'style.css', 'app.js', 'util.js', 'store.js', 'engine.js', 'midi.js',
   'project.js', 'ui.js', 'dialogs.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png',
